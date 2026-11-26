@@ -114,26 +114,32 @@ export function renderCipherPane(root: HTMLElement): void {
     keyInput.setAttribute('aria-invalid', String(!isHex(keyHex, 16)))
     blockInput.setAttribute('aria-invalid', String(!isHex(blockHex, 8)))
 
+    const operation = form.elements.namedItem('operation') as RadioNodeList
+    const mode = operation.value as Operation
+    const outputLabel = mode === 'encrypt' ? 'Ciphertext' : 'Plaintext'
+    root.querySelector('#block-label')!.textContent = mode === 'encrypt' ? 'Plaintext block' : 'Ciphertext block'
+    root.querySelector('#misty-result-label')!.textContent = outputLabel
+    root.querySelector('#kasumi-result-label')!.textContent = outputLabel
+
     if (!isHex(keyHex, 16) || !isHex(blockHex, 8)) {
+      for (const selector of ['#misty-result', '#kasumi-result', '#misty-roundtrip', '#kasumi-roundtrip', '#misty-verdict', '#kasumi-verdict', '#comparison-verdict']) {
+        const previous = root.querySelector<HTMLElement>(selector)!
+        previous.textContent = ''
+        previous.classList.remove('verdict-pass', 'verdict-fail', 'verdict-note')
+      }
       error.textContent = 'Enter exactly 32 hex characters for the key and 16 for the block.'
       return
     }
 
     error.textContent = ''
-    const operation = form.elements.namedItem('operation') as RadioNodeList
-    const mode = operation.value as Operation
     const key = hexToBytes(keyHex)
     const block = hexToBytes(blockHex)
     const mistyResult = mode === 'encrypt' ? encryptMisty1Block(block, key) : decryptMisty1Block(block, key)
     const kasumiResult = mode === 'encrypt' ? encryptKasumiBlock(block, key) : decryptKasumiBlock(block, key)
     const mistyRoundTrip = mode === 'encrypt' ? decryptMisty1Block(mistyResult, key) : encryptMisty1Block(mistyResult, key)
     const kasumiRoundTrip = mode === 'encrypt' ? decryptKasumiBlock(kasumiResult, key) : encryptKasumiBlock(kasumiResult, key)
-    const outputLabel = mode === 'encrypt' ? 'Ciphertext' : 'Plaintext'
     const expected = bytesToHex(block)
 
-    root.querySelector('#block-label')!.textContent = mode === 'encrypt' ? 'Plaintext block' : 'Ciphertext block'
-    root.querySelector('#misty-result-label')!.textContent = outputLabel
-    root.querySelector('#kasumi-result-label')!.textContent = outputLabel
     root.querySelector('#misty-result')!.textContent = bytesToHex(mistyResult)
     root.querySelector('#kasumi-result')!.textContent = bytesToHex(kasumiResult)
     root.querySelector('#misty-roundtrip')!.textContent = bytesToHex(mistyRoundTrip)
